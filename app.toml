@@ -1,0 +1,16 @@
+# 主機位址
+Host="192.168.122.201"
+# 連接埠
+Port=31306
+# 資料庫名稱
+Database="SyncDB"
+# 登入帳號
+User="root"
+# 登入密碼
+Password="p@ssw0rd"
+# 主機名稱
+Source="dev test"
+# 監聽檔案
+MonitorFiles=[
+    "/home/nanashi07/aa.txt"
+]
