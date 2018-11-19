@@ -68,6 +68,11 @@ func queryLastOne(connection *string) *CrossData {
 
 		// 讀取資料
 		if result.Next() {
+			// 關閉
+			defer func() {
+				result.Close()
+			}()
+
 			result.Scan(&id, &source, &actionAt, &createdAt)
 
 			data := new(CrossData)
