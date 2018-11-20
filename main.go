@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -29,6 +30,10 @@ type appConfig struct {
 	Source string
 	// 監控檔案
 	MonitorFiles []string
+	// 監控資料夾
+	MonitorFolders []string
+	// 檔名的 pattern
+	FileNamePattern string
 }
 
 type CrossData struct {
@@ -42,7 +47,8 @@ type CrossData struct {
 const timeFormat = "2006-01-02 15:04:05.000000000"
 
 var (
-	Config = new(appConfig)
+	Config  = new(appConfig)
+	lastRow string
 )
 
 func queryLastOne(connection *string) *CrossData {
@@ -120,25 +126,35 @@ func main() {
 	// 建立監聽器
 	w := watcher.New()
 
+	// 僅限寫入
+	w.FilterOps(watcher.Create, watcher.Write)
+
 	// 處理監聽事件
 	go func() {
 		for {
 			select {
-			case <-w.Event:
+			case evt := <-w.Event:
 				// 同步時間
 				eventTime := time.Now().UTC().Format(timeFormat)
 
 				// 取得最後一筆資料
 				data := queryLastOne(&connection)
 
-				// 輸出記錄
-				fmt.Printf("%v,Receive data,%v,%v,%v,%v,%v\n",
-					eventTime,
-					data.Id,
-					data.Source,
-					Config.Source, // target
-					data.ActionAt,
-					data.CreatedAt.Format(timeFormat))
+				// 監控的檔案名稱
+				name := evt.FileInfo.Name()
+
+				// 過濾檔名，僅處理 relay log
+				if strings.Contains(name, Config.FileNamePattern) && lastRow != data.Id {
+					// 輸出記錄
+					fmt.Printf("%v,Receive data,%v,%v,%v,%v,%v\n",
+						eventTime,
+						data.Id,
+						data.Source,
+						Config.Source, // target
+						data.ActionAt,
+						data.CreatedAt.Format(timeFormat))
+					lastRow = data.Id
+				}
 			case err := <-w.Error:
 				log.Fatalln(err)
 			case <-w.Closed:
@@ -153,6 +169,14 @@ func main() {
 
 		// 監聽指定檔案
 		if err := w.Add(fileName); err != nil {
+			log.Fatalln(err)
+		}
+	}
+
+	for index := range Config.MonitorFolders {
+		folder := Config.MonitorFolders[index]
+
+		if err := w.AddRecursive(folder); err != nil {
 			log.Fatalln(err)
 		}
 	}

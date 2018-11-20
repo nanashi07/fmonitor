@@ -14,3 +14,8 @@ Source="dev test"
 MonitorFiles=[
     "/home/nanashi07/aa.txt"
 ]
+# 監聽資料夾
+MonitorFolders=[
+    ""
+]
+FileNamePattern="relay-bin"
